@@ -56,14 +56,9 @@ class Ingredient(models.Model):
     """Ingredient to be used in a recipe"""
     name = models.CharField(
         max_length=255,
-        unique=True,
         db_index=True,
         blank=False,
         verbose_name='Название'
-    )
-    quantity = models.IntegerField(
-        blank=False,
-        verbose_name='Количество'
     )
     measurement_unit = models.CharField(
         max_length=255,
@@ -74,10 +69,8 @@ class Ingredient(models.Model):
     class Meta:
         verbose_name = 'Ingredient'
         verbose_name_plural = 'Ingredients'
-        ordering = ('id',)
-
     def __str__(self):
-        return '{} {}'.format(self.name, self.measurement_unit)
+        return '{}, {}'.format(self.name, self.measurement_unit)
 
 
 class Recipe(models.Model):
@@ -87,11 +80,16 @@ class Recipe(models.Model):
         verbose_name='Название рецепта')
     tag = models.ManyToManyField(
         Tag,
+        blank=False,
         related_name='recipes',
-        verbose_name='Теги',
+        verbose_name='Теги'
     )
     ingredients = models.ManyToManyField(
         Ingredient,
+        blank=True,
+        # null=True,
+        through='IngredientToRecipe',
+        through_fields=('recipe', 'ingredient'),
         verbose_name='Ингридиенты'
     )
     time_minutes = models.IntegerField(
@@ -107,7 +105,8 @@ class Recipe(models.Model):
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
-        db_index=True
+        db_index=True,
+        verbose_name='Дата публицации'
     )
     image = models.ImageField(
         'Фото',
@@ -116,7 +115,10 @@ class Recipe(models.Model):
         null=True,
         help_text='Загрузите фото'
     )
-
+    
+    def get_ingredients(self):
+        return ", ".join([p.name for p in self.ingredients.all()])
+    
     class Meta:
         models.UniqueConstraint(
             fields=['title', 'author'], name='unique_review')
@@ -125,4 +127,25 @@ class Recipe(models.Model):
         ordering = ('pub_date',)
 
     def __str__(self):
-        return '{} {}'.format(self.title, self.author)
+        return '{}, {}'.format(self.title, self.author)
+
+
+class IngredientToRecipe(models.Model):
+    ingredient = models.ForeignKey(
+        Ingredient,
+        null=True,
+        on_delete=models.SET_NULL
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        null=True,
+        on_delete=models.SET_NULL
+    )
+    quantity = models.IntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Количество'
+    )
+    
+    def __str__(self):
+        return '{}'.format(self.recipe)    

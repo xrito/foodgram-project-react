@@ -2,6 +2,7 @@ import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FILES_DIR = os.path.abspath(os.path.join(BASE_DIR, '../../'))
 
 SECRET_KEY = 'dfgc_yns18ioi&*zh&gttb(nmh8^=xe5u49%cn8+41%-p8!s&_'
 
@@ -21,7 +22,6 @@ INSTALLED_APPS = [
     'django_filters',
     'recipes.apps.RecipesConfig',
     'users.apps.UsersConfig',
-    'frontend',
     'api'
 ]
 
@@ -37,10 +37,12 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'foodgram.urls'
 
+TEMPLATES_DIR = os.path.join(BASE_DIR, 'docs','templates')
+REDOC_DIR = os.path.join(FILES_DIR, 'docs')
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [TEMPLATES_DIR, REDOC_DIR,],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
