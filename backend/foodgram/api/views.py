@@ -1,3 +1,8 @@
-from django.shortcuts import render
+from recipes.models import *
+from .serializers import TagSerializer, IngredientSerializer, RecipeSerializer
+from rest_framework import generics
 
-# Create your views here.
+
+class RecipeListCreate(generics.ListCreateAPIView):
+    queryset = Recipe.objects.all()
+    serializer_class = RecipeSerializer
