@@ -4,7 +4,8 @@ import uuid
 from django.db import models
 from django.conf import settings
 from django.utils.html import format_html
-
+from users.models import User
+from django.db.models import UniqueConstraint
 
 def recipe_image_file_path(instance, filename):
     """Generate file path for new recipe image"""
@@ -21,13 +22,13 @@ class Tag(models.Model):
         ('dinner', 'Обед'),
         ('supper', 'Ужин'),
     )
-    title = models.CharField(
+    name = models.CharField(
         max_length=255,
         choices=DEFAULT_CHOICES,
         default='breakfast',
         blank=False
     )
-    hexcolor = models.CharField(
+    color = models.CharField(
         max_length=7,
         default='#49B64E',
         verbose_name='Цвет тега',
@@ -36,7 +37,6 @@ class Tag(models.Model):
     slug = models.SlugField(
         max_length=255,
         default='',
-        # editable=False,
         unique=True,
         db_index=True,
         verbose_name='URL'
@@ -45,11 +45,74 @@ class Tag(models.Model):
     def colored_title(self):
         return format_html(
             '<span style="color: #{};">{}</span>',
-            self.hexcolor,
+            self.color,
         )
 
     def __str__(self):
-        return self.title
+        return self.name
+
+
+class Recipe(models.Model):
+    """Recipe object"""
+    tags = models.ManyToManyField(
+        Tag,
+        blank=False,
+        related_name='recipes',
+        verbose_name='Теги'
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='recipes',
+        verbose_name='Автор'
+    )
+    ingredient = models.ManyToManyField(
+        'Ingredient',
+        # blank=False,
+        through='IngredientinRecipe',
+        # through_fields=('recipe', 'ingredient'),
+        related_name='recipes',
+        verbose_name='Ингридиенты'
+    )
+    is_favorited = models.BooleanField(default=False)
+    is_in_shopping_cart = models.BooleanField(default=False)
+    pub_date = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        verbose_name='Дата публицации'
+    )
+    name = models.CharField(
+        max_length=255,
+        verbose_name='Название рецепта')
+    image = models.ImageField(
+        'Фото',
+        upload_to=recipe_image_file_path,
+        blank=True,
+        null=True,
+        help_text='Загрузите фото'
+    )
+    text = models.TextField(verbose_name='Описание')
+    cooking_time = models.IntegerField(
+        verbose_name='Время приготовления',
+        help_text='минут'
+    )
+    users = models.ManyToManyField(
+        User,
+        related_name='favorite_recipe'
+    )
+
+    def get_ingredient(self):
+        return ", ".join([p.name for p in self.ingredient.all()])
+
+    class Meta:
+        models.UniqueConstraint(
+            fields=['name', 'author'], name='unique_review')
+        verbose_name = 'Recipe'
+        verbose_name_plural = 'Recipes'
+        ordering = ('-pub_date',)
+
+    def __str__(self):
+        return '{}, {}'.format(self.name, self.author)
 
 
 class Ingredient(models.Model):
@@ -69,83 +132,42 @@ class Ingredient(models.Model):
     class Meta:
         verbose_name = 'Ingredient'
         verbose_name_plural = 'Ingredients'
+
     def __str__(self):
         return '{}, {}'.format(self.name, self.measurement_unit)
 
 
-class Recipe(models.Model):
-    """Recipe object"""
-    title = models.CharField(
-        max_length=255,
-        verbose_name='Название рецепта')
-    tag = models.ManyToManyField(
-        Tag,
-        blank=False,
-        related_name='recipes',
-        verbose_name='Теги'
-    )
-    ingredients = models.ManyToManyField(
-        Ingredient,
-        blank=True,
-        # null=True,
-        through='IngredientToRecipe',
-        through_fields=('recipe', 'ingredient'),
-        verbose_name='Ингридиенты'
-    )
-    time_minutes = models.IntegerField(
-        verbose_name='Время приготовления',
-        help_text='минут'
-    )
-    text = models.TextField(verbose_name='Описание')
-    author = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='recipes',
-        verbose_name='Автор'
-    )
-    pub_date = models.DateTimeField(
-        auto_now_add=True,
-        db_index=True,
-        verbose_name='Дата публицации'
-    )
-    image = models.ImageField(
-        'Фото',
-        upload_to=recipe_image_file_path,
-        blank=True,
-        null=True,
-        help_text='Загрузите фото'
-    )
-    
-    def get_ingredients(self):
-        return ", ".join([p.name for p in self.ingredients.all()])
-    
-    class Meta:
-        models.UniqueConstraint(
-            fields=['title', 'author'], name='unique_review')
-        verbose_name = 'Recipe'
-        verbose_name_plural = 'Recipes'
-        ordering = ('pub_date',)
-
-    def __str__(self):
-        return '{}, {}'.format(self.title, self.author)
-
-
-class IngredientToRecipe(models.Model):
-    ingredient = models.ForeignKey(
-        Ingredient,
-        null=True,
-        on_delete=models.SET_NULL
-    )
+class IngredientinRecipe(models.Model):
     recipe = models.ForeignKey(
         Recipe,
         null=True,
-        on_delete=models.SET_NULL
+        on_delete=models.CASCADE,
+        related_name='ingredients'
     )
-    quantity = models.IntegerField(
-        blank=True,
+    ingredient = models.ForeignKey(
+        Ingredient,
         null=True,
+        on_delete=models.SET_NULL,
+        related_name='ingredient_recipes'
+    )
+    amount = models.IntegerField(
+        blank=False,
+        null=False,
         verbose_name='Количество'
     )
-    
+
     def __str__(self):
-        return '{}'.format(self.recipe)    
+        return '{}'.format(self.recipe)
+
+
+class FavoriteRecipe(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             on_delete=models.CASCADE,
+                             )
+    recipe = models.ForeignKey(Recipe,
+                               on_delete=models.CASCADE
+                               )
+    class Meta:
+        unique_together = ('user', 'recipe')
+        UniqueConstraint(
+            fields=['user', 'recipe'], name='unique_favorite')
