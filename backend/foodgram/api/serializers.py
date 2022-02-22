@@ -79,7 +79,7 @@ class RecipeListSerializer(serializers.ModelSerializer):
         model = Recipe
         fields = ('id', 'tags', 'author', 'ingredients',
                   'is_favorited', 'is_in_shopping_cart', 'name',  'image',
-                  'text',   'cooking_time', 'pub_date')
+                  'text',   'cooking_time')
         read_only_fields = ('id',)
         extra_kwargs = {'ingredients': {'required': False}}
 

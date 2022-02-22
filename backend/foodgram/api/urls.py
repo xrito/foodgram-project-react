@@ -17,9 +17,9 @@ router.register('inrecipe', IngredientinRecipeViewSet, basename='inrecipes')
 router.register('users', UserViewSet)
 
 urlpatterns = [
-    path('v1/users/me/', profile, name='profile'),
-    path('v1/', include(router.urls)),
-    path('v1/favorites/', FavoriteRecipeList.as_view())
+    path('users/me/', profile, name='profile'),
+    path('', include(router.urls)),
+    path('favorites/', FavoriteRecipeList.as_view())
     # path('v1/auth/signup/', send_auth_code, name='send_auth_code'),
     # path('v1/auth/token/', get_token, name='get_access_token')
 ]
