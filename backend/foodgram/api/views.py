@@ -6,10 +6,11 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from django_filters.rest_framework import DjangoFilterBackend
 
 from .serializers import (IngredientinRecipeSerializer, IngredientSerializer,
-                          RecipeCreateSerializer, RecipeListSerializer,
-                          TagSerializer, UserSerializer, ProfileSerializer, FavoriteRecipeSerializer)
+                          RecipeListSerializer, TagSerializer,
+                          UserSerializer, ProfileSerializer, FavoriteRecipeSerializer)
 
 User = get_user_model()
 
@@ -54,13 +55,15 @@ class TagViewSet(viewsets.ModelViewSet):
 class IngredientViewSet(viewsets.ModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    filter_backends = [filters.OrderingFilter]
+
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeListSerializer
     pagination_class = PageNumberPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['tags__slug']
 
     # @action(methods=['get'], detail=False)
     # def tag(self, request):

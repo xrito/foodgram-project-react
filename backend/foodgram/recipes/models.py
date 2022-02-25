@@ -1,52 +1,49 @@
-import os
-import uuid
-
-from django.db import models
 from django.conf import settings
-from django.utils.html import format_html
-from users.models import User
+from django.contrib.auth import get_user_model
+from django.db import models
 from django.db.models import UniqueConstraint
+from users.models import User
+from django.core.validators import MinValueValidator
 
-def recipe_image_file_path(instance, filename):
-    """Generate file path for new recipe image"""
-    ext = filename.split('.')[-1]
-    filename = f'{uuid.uuid4()}.{ext}'
-
-    return os.path.join('uploads/recipe/', filename)
+User = get_user_model()
 
 
 class Tag(models.Model):
     """Tag to be used for a recipe"""
-    DEFAULT_CHOICES = (
-        ('breakfast', 'Завтрак'),
-        ('dinner', 'Обед'),
-        ('supper', 'Ужин'),
-    )
+    PINK = '#FF80ED'
+    ORANGE = '#FFA500'
+    BLUE = '#000080'
+
+    DEFAULT_CHOICES = [
+        (PINK, 'Синий'),
+        (ORANGE, 'Оранжевый'),
+        (BLUE, 'Зеленый'),
+    ]
     name = models.CharField(
         max_length=255,
-        choices=DEFAULT_CHOICES,
+        unique=True,
         default='breakfast',
         blank=False
     )
     color = models.CharField(
         max_length=7,
+        unique=True,
+        choices=DEFAULT_CHOICES,
         default='#49B64E',
         verbose_name='Цвет тега',
         help_text=(u'HEX color, as #RRGGBB')
     )
     slug = models.SlugField(
         max_length=255,
-        default='',
         unique=True,
         db_index=True,
         verbose_name='URL'
     )
 
-    def colored_title(self):
-        return format_html(
-            '<span style="color: #{};">{}</span>',
-            self.color,
-        )
+    class Meta:
+        ordering = ['-id']
+        verbose_name = 'Tag'
+        verbose_name_plural = 'Tags'
 
     def __str__(self):
         return self.name
@@ -68,14 +65,10 @@ class Recipe(models.Model):
     )
     ingredient = models.ManyToManyField(
         'Ingredient',
-        # blank=False,
         through='IngredientinRecipe',
-        # through_fields=('recipe', 'ingredient'),
         related_name='recipes',
         verbose_name='Ингридиенты'
     )
-    is_favorited = models.BooleanField(default=False)
-    is_in_shopping_cart = models.BooleanField(default=False)
     pub_date = models.DateTimeField(
         auto_now_add=True,
         db_index=True,
@@ -86,19 +79,14 @@ class Recipe(models.Model):
         verbose_name='Название рецепта')
     image = models.ImageField(
         'Фото',
-        upload_to=recipe_image_file_path,
-        blank=True,
-        null=True,
-        help_text='Загрузите фото'
+        upload_to='recipes/',
+        help_text='Фото рецепта'
     )
     text = models.TextField(verbose_name='Описание')
-    cooking_time = models.IntegerField(
+    cooking_time = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), ],
         verbose_name='Время приготовления',
         help_text='минут'
-    )
-    users = models.ManyToManyField(
-        User,
-        related_name='favorite_recipe'
     )
 
     def get_ingredient(self):
@@ -132,6 +120,10 @@ class Ingredient(models.Model):
     class Meta:
         verbose_name = 'Ingredient'
         verbose_name_plural = 'Ingredients'
+        constraints = [
+            UniqueConstraint(fields=['name', 'measurement_unit'],
+                             name='unique ingredient')
+        ]
 
     def __str__(self):
         return '{}, {}'.format(self.name, self.measurement_unit)
@@ -150,24 +142,55 @@ class IngredientinRecipe(models.Model):
         on_delete=models.SET_NULL,
         related_name='ingredient_recipes'
     )
-    amount = models.IntegerField(
+    amount = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), ],
         blank=False,
         null=False,
         verbose_name='Количество'
     )
+
+    class Meta:
+        ordering = ['-id']
+        constraints = [
+            UniqueConstraint(fields=['ingredient', 'recipe'],
+                             name='unique ingredient in recipe')
+        ]
 
     def __str__(self):
         return '{}'.format(self.recipe)
 
 
 class FavoriteRecipe(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             on_delete=models.CASCADE,
-                             )
-    recipe = models.ForeignKey(Recipe,
-                               on_delete=models.CASCADE
-                               )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='favorite',
+    )
+
     class Meta:
+        ordering = ['-id']
+        verbose_name = 'Recipe in favorites'
+        verbose_name_plural = 'Recipes in favorites'
         unique_together = ('user', 'recipe')
         UniqueConstraint(
             fields=['user', 'recipe'], name='unique_favorite')
+
+
+class CartRecipe(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='cart'
+    )
+
+    class Meta:
+        verbose_name = 'Recipe in cart'
+        verbose_name_plural = 'Recipes in cart'

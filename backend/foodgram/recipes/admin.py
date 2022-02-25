@@ -1,7 +1,9 @@
 from django.apps import apps
 from django.contrib import admin
 from django.contrib.admin.sites import AlreadyRegistered
-from .models import Recipe, Tag, Ingredient, IngredientinRecipe, FavoriteRecipe
+
+from .models import (CartRecipe, FavoriteRecipe, Ingredient,
+                     IngredientinRecipe, Recipe, Tag)
 
 
 class TagAdmin(admin.ModelAdmin):
@@ -39,6 +41,11 @@ class FavoriteRecipeAdmin(admin.ModelAdmin):
     list_display = ('user', 'recipe')
 
 
+class CartRecipeAdmin(admin.ModelAdmin):
+    list_display = ('user', 'recipe')
+
+
+admin.site.register(CartRecipe, CartRecipeAdmin)
 admin.site.register(FavoriteRecipe, FavoriteRecipeAdmin)
 admin.site.register(Tag, TagAdmin)
 admin.site.register(Recipe, RecipeAdmin)

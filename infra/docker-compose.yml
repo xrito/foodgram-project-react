@@ -4,25 +4,35 @@ services:
     build:
       context: ../backend/foodgram
       dockerfile: Dockerfile
-    command: gunicorn foodgram.wsgi --bind 0.0.0.0:8000 --timeout 120
+    restart: always
     volumes:
-      - static_value:/foodgram/static/
-    ports:
-      - "8000:8000"
+      - static_value:/code/static/
+      - media_value:/code/media/          
+    command: gunicorn foodgram.wsgi --bind 0.0.0.0:8000 --timeout 120  
+    env_file:
+      - ./.env 
   frontend:
     build:
       context: ../frontend
       dockerfile: Dockerfile
     volumes:
       - ../frontend/:/app/result_build/
+    depends_on:
+      - backend  
   nginx:
-    image: nginx:latest
+    image: nginx:1.19.3
     ports:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - ../frontend/build:/usr/share/nginx/html/
       - ../docs/:/usr/share/nginx/html/api/docs/
+      - static_value:/var/html/static/
+      - media_value:/var/html/media/   
     depends_on:
       - backend
       - frontend
+
+volumes:
+  static_value:
+  media_value:

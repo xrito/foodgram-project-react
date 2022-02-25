@@ -1,8 +1,9 @@
 from django.contrib.auth import get_user_model
-from recipes.models import *
+from drf_extra_fields.fields import Base64ImageField
+from recipes.models import (CartRecipe, FavoriteRecipe, Ingredient,
+                            IngredientinRecipe, Recipe, Tag)
 from rest_framework import serializers
-from rest_framework.relations import SlugRelatedField
-from rest_framework.validators import UniqueValidator
+from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 User = get_user_model()
 
@@ -45,7 +46,6 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class IngredientinRecipeSerializer(serializers.ModelSerializer):
-    # recipe = serializers.ReadOnlyField(source='recipe.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(
         source='ingredient.measurement_unit')
@@ -53,6 +53,12 @@ class IngredientinRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = IngredientinRecipe
         fields = ('id', 'name', 'measurement_unit', 'amount')
+        validators = [
+            UniqueTogetherValidator(
+                queryset=IngredientinRecipe.objects.all(),
+                fields=['ingredient', 'recipe']
+            )
+        ]
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -71,9 +77,12 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 class RecipeListSerializer(serializers.ModelSerializer):
     """Serialize a recipe"""
-    ingredients = IngredientinRecipeSerializer(many=True)
+    ingredients = IngredientinRecipeSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     author = UserSerializer(read_only=True)
+    is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
+    image = Base64ImageField()
 
     class Meta:
         model = Recipe
@@ -83,22 +92,31 @@ class RecipeListSerializer(serializers.ModelSerializer):
         read_only_fields = ('id',)
         extra_kwargs = {'ingredients': {'required': False}}
 
+    def create(self, validated_data):
+        pass
 
-class RecipeCreateSerializer(RecipeListSerializer):
-    """Serialize a recipe create"""
-    ingredients = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Ingredient.objects.all()
-    )
-    tag = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Tag.objects.all()
-    )
+    def update(self, instance, validated_data):
+        return super().update(instance, validated_data)
 
-    class Meta:
-        model = Recipe
-        fields = '__all__'
-        read_only_fields = ('id',)
+    def get_is_favorited(self, obj):
+        user = self.context['request'].user
+        if user.is_authenticated:
+            try:
+                obj.favorite.get(user=user)
+                return True
+            except FavoriteRecipe.DoesNotExist:
+                pass
+        return False
+
+    def get_is_in_shopping_cart(self, obj):
+        user = self.context['request'].user
+        if user.is_authenticated:
+            try:
+                obj.cart.get(user=user)
+                return True
+            except CartRecipe.DoesNotExist:
+                pass
+        return False
 
 
 class FavoriteRecipeSerializer(serializers.ModelSerializer):
