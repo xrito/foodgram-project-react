@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.contrib.admin.sites import AlreadyRegistered
 
 from .models import (CartRecipe, FavoriteRecipe, Ingredient,
-                     IngredientinRecipe, Recipe, Tag)
+                     IngredientinRecipe, Recipe, Tag, Subscribe)
 
 
 class TagAdmin(admin.ModelAdmin):
@@ -43,8 +43,10 @@ class FavoriteRecipeAdmin(admin.ModelAdmin):
 
 class CartRecipeAdmin(admin.ModelAdmin):
     list_display = ('user', 'recipe')
+class SubscribeAdmin(admin.ModelAdmin):
+    model =Subscribe
 
-
+admin.site.register(Subscribe, SubscribeAdmin)
 admin.site.register(CartRecipe, CartRecipeAdmin)
 admin.site.register(FavoriteRecipe, FavoriteRecipeAdmin)
 admin.site.register(Tag, TagAdmin)

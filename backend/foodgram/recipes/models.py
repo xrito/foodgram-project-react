@@ -164,6 +164,7 @@ class FavoriteRecipe(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        related_name='favorite',
     )
     recipe = models.ForeignKey(
         Recipe,
@@ -194,3 +195,24 @@ class CartRecipe(models.Model):
     class Meta:
         verbose_name = 'Recipe in cart'
         verbose_name_plural = 'Recipes in cart'
+
+
+class Subscribe(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='subscriber'
+    )
+    subscribed = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='subscribed'
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'subscribed'],
+                name='unique_user_subscribed'
+            )
+        ]

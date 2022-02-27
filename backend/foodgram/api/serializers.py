@@ -1,8 +1,9 @@
 from django.contrib.auth import get_user_model
 from drf_extra_fields.fields import Base64ImageField
 from recipes.models import (CartRecipe, FavoriteRecipe, Ingredient,
-                            IngredientinRecipe, Recipe, Tag)
+                            IngredientinRecipe, Recipe, Subscribe, Tag)
 from rest_framework import serializers
+from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 User = get_user_model()
@@ -19,12 +20,25 @@ class UserSerializer(serializers.ModelSerializer):
     )
     first_name = serializers.CharField(required=False, max_length=150)
     last_name = serializers.CharField(required=False, max_length=150)
+    is_subscribed = serializers.SerializerMethodField()
+    recipes = serializers.StringRelatedField(many=True, read_only=True)
+
 
     class Meta:
         model = User
         fields = ('email', 'id', 'username', 'first_name',
-                  'last_name', 'is_subscribed')
+                  'last_name', 'is_subscribed', 'recipes')
         lookup_field = 'id'
+
+    def get_is_subscribed(self, obj):
+        user = self.context['request'].user
+        if user.is_authenticated:
+            try:
+                obj.subscribed.get(user=user)
+                return True
+            except Subscribe.DoesNotExist:
+                pass
+        return False
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -75,7 +89,7 @@ class IngredientSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'measurement_unit', )
 
 
-class RecipeListSerializer(serializers.ModelSerializer):
+class RecipeSerializer(serializers.ModelSerializer):
     """Serialize a recipe"""
     ingredients = IngredientinRecipeSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
@@ -121,13 +135,39 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
 class FavoriteRecipeSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
-    recipe = RecipeListSerializer(read_only=True)
+    recipe = RecipeSerializer(read_only=True)
 
     class Meta:
         model = FavoriteRecipe
         fields = ('id', 'user', 'recipe')
-        extra_kwargs = {
-            'id': {
-                'read_only': True
-            }
-        }
+        # extra_kwargs = {
+        #     'id': {
+        #         'read_only': True
+        #     }
+        # }
+
+
+class SubscribeSerializer(serializers.ModelSerializer):
+    # user = serializers.CharField(
+    #     read_only=True, default=serializers.CurrentUserDefault()
+    # )
+    # subscribed = serializers.SlugRelatedField(
+    #     slug_field='username',
+    #     queryset=User.objects.all(),
+    # )
+    subscribed = UserSerializer(read_only=True)
+    class Meta:
+        model = Subscribe
+        fields = ('subscribed',)
+    #     validators = [
+    #         UniqueTogetherValidator(
+    #             queryset=Subscribe.objects.all(),
+    #             fields=('user', 'subscribed')
+    #         )
+    #     ]
+
+    # def validate_following(self, value):
+    #     if value == self.context['request'].user:
+    #         raise serializers.ValidationError(
+    #             'Нельзя подписаться на самого себя!')
+    #     return value
