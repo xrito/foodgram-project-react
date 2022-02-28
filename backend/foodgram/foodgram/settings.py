@@ -24,7 +24,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'recipes.apps.RecipesConfig',
     'users.apps.UsersConfig',
-    'api.apps.ApiConfig'
+    'api.apps.ApiConfig',
 ]
 
 MIDDLEWARE = [
@@ -139,5 +139,8 @@ REST_FRAMEWORK = {
     ]
 }
 DJOSER = {
-    'LOGIN_FIELD': 'email'
+    'LOGIN_FIELD': 'email',
+     'SERIALIZERS': {
+         'user_create': 'users.serializers.UserRegistrationSerializer'
+    }
 }

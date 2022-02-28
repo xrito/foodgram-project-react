@@ -1,62 +1,10 @@
-from django.contrib.auth import get_user_model
 from drf_extra_fields.fields import Base64ImageField
 from recipes.models import (CartRecipe, FavoriteRecipe, Ingredient,
-                            IngredientinRecipe, Recipe, Subscribe, Tag)
+                            IngredientinRecipe, Recipe, Tag)
+from users.models import User
 from rest_framework import serializers
-from rest_framework.relations import SlugRelatedField
-from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
-
-User = get_user_model()
-
-
-class UserSerializer(serializers.ModelSerializer):
-    username = serializers.RegexField(
-        regex=r"^[\w.@+-]+\Z", required=True, max_length=150,
-        validators=[UniqueValidator(queryset=User.objects.all())]
-    )
-    email = serializers.EmailField(
-        required=True, max_length=254,
-        validators=[UniqueValidator(queryset=User.objects.all())]
-    )
-    first_name = serializers.CharField(required=False, max_length=150)
-    last_name = serializers.CharField(required=False, max_length=150)
-    is_subscribed = serializers.SerializerMethodField()
-    recipes = serializers.StringRelatedField(many=True, read_only=True)
-
-
-    class Meta:
-        model = User
-        fields = ('email', 'id', 'username', 'first_name',
-                  'last_name', 'is_subscribed', 'recipes')
-        lookup_field = 'id'
-
-    def get_is_subscribed(self, obj):
-        user = self.context['request'].user
-        if user.is_authenticated:
-            try:
-                obj.subscribed.get(user=user)
-                return True
-            except Subscribe.DoesNotExist:
-                pass
-        return False
-
-
-class ProfileSerializer(serializers.ModelSerializer):
-    username = serializers.RegexField(
-        regex=r"^[\w.@+-]+\Z", required=False, max_length=150,
-        validators=[UniqueValidator(queryset=User.objects.all())]
-    )
-    email = serializers.EmailField(
-        required=False, max_length=254,
-        validators=[UniqueValidator(queryset=User.objects.all())]
-    )
-    first_name = serializers.CharField(required=False, max_length=150)
-    last_name = serializers.CharField(required=False, max_length=150)
-
-    class Meta:
-        model = User
-        fields = ('email', 'id', 'username', 'first_name',
-                  'last_name', 'is_subscribed')
+from rest_framework.validators import UniqueTogetherValidator
+from users.serializers import UserSerializer
 
 
 class IngredientinRecipeSerializer(serializers.ModelSerializer):
@@ -79,19 +27,20 @@ class TagSerializer(serializers.ModelSerializer):
     """Serializer for tag objects"""
     class Meta:
         model = Tag
-        fields = ('id', 'name', 'color', 'slug')
+        fields = '__all__'
 
 
 class IngredientSerializer(serializers.ModelSerializer):
     """Serializer for ingredient objects"""
     class Meta:
         model = Ingredient
-        fields = ('id', 'name', 'measurement_unit', )
+        fields = '__all__'
 
 
 class RecipeSerializer(serializers.ModelSerializer):
     """Serialize a recipe"""
-    ingredients = IngredientinRecipeSerializer(many=True, read_only=True)
+    ingredients = IngredientinRecipeSerializer(
+        many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     author = UserSerializer(read_only=True)
     is_favorited = serializers.SerializerMethodField()
@@ -104,7 +53,6 @@ class RecipeSerializer(serializers.ModelSerializer):
                   'is_favorited', 'is_in_shopping_cart', 'name',  'image',
                   'text',   'cooking_time')
         read_only_fields = ('id',)
-        extra_kwargs = {'ingredients': {'required': False}}
 
     def create(self, validated_data):
         pass
@@ -134,40 +82,18 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class FavoriteRecipeSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    recipe = RecipeSerializer(read_only=True)
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
 
     class Meta:
         model = FavoriteRecipe
-        fields = ('id', 'user', 'recipe')
-        # extra_kwargs = {
-        #     'id': {
-        #         'read_only': True
-        #     }
-        # }
+        fields = ('user', 'recipe')
 
 
-class SubscribeSerializer(serializers.ModelSerializer):
-    # user = serializers.CharField(
-    #     read_only=True, default=serializers.CurrentUserDefault()
-    # )
-    # subscribed = serializers.SlugRelatedField(
-    #     slug_field='username',
-    #     queryset=User.objects.all(),
-    # )
-    subscribed = UserSerializer(read_only=True)
+class CartRecipeSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
+
     class Meta:
-        model = Subscribe
-        fields = ('subscribed',)
-    #     validators = [
-    #         UniqueTogetherValidator(
-    #             queryset=Subscribe.objects.all(),
-    #             fields=('user', 'subscribed')
-    #         )
-    #     ]
-
-    # def validate_following(self, value):
-    #     if value == self.context['request'].user:
-    #         raise serializers.ValidationError(
-    #             'Нельзя подписаться на самого себя!')
-    #     return value
+        model = CartRecipe
+        fields = ('user', 'recipe')
