@@ -1,18 +1,18 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from djoser.views import UserViewSet
 from recipes.models import *
-from users.models import *
-from rest_framework import filters, generics, mixins, status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from users.serializers import SubscribeSerializer
+from users.models import *
+from users.serializers import SubscribeSerializer, UserSerializer
 
-from .serializers import IngredientSerializer, RecipeSerializer, TagSerializer
-from users.serializers import SubscribeSerializer
-#  UserSerializer
-User = get_user_model()
+from .filters import RecipesFilter
+from .serializers import (FavoriteRecipeSerializer, IngredientSerializer,
+                          RecipeSerializer, TagSerializer)
 
 
 class ListCreateDeleteViewSet(mixins.ListModelMixin,
@@ -22,10 +22,31 @@ class ListCreateDeleteViewSet(mixins.ListModelMixin,
     pass
 
 
-# class UserViewSet(viewsets.ModelViewSet):
-#     serializer_class = UserSerializer
-#     queryset = User.objects.all()
-#     pagination_class = PageNumberPagination
+class UserViewSet(UserViewSet):
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
+    pagination_class = PageNumberPagination
+
+    @action(methods=['get'], detail=False)
+    def subscriptions(self, serializer):
+        queryset = Subscription.objects.filter(user=self.request.user)
+        page = self.paginate_queryset(queryset)
+        serializer = SubscribeSerializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
+
+    @action(methods=['post', 'delete'], detail=True)
+    def subscribe(self, request, id):
+        queryset = Subscription.objects.all().filter(
+            subscribing_id=id, user_id=self.request.user.id)
+        if request.method == 'POST':
+            queryset = Subscription.objects.create(
+                subscribing_id=id, user_id=self.request.user.id)
+            queryset.save()
+            return Response({"message": "Subscription Created Successfully"}, status=status.HTTP_201_CREATED)
+        if request.method == 'DELETE':
+            queryset.delete()
+            return Response({"message": "Unsubscribed"}, status=status.HTTP_202_ACCEPTED)
+
 
 #     @action(methods=['get'], detail=False)
 #     def subscriptions(self, request):
@@ -51,7 +72,7 @@ class ListCreateDeleteViewSet(mixins.ListModelMixin,
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    pagination_class = PageNumberPagination
+    pagination_class = None
 
 
 class IngredientViewSet(viewsets.ModelViewSet):
@@ -67,7 +88,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
     serializer_class = RecipeSerializer
     pagination_class = PageNumberPagination
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['tags__slug']
+    filterset_class = RecipesFilter
+
+    @action(methods=['get'], detail=False)
+    def favorites(self, serializer):
+        queryset = FavoriteRecipe.objects.filter(user=self.request.user)
+        page = self.paginate_queryset(queryset)
+        serializer = FavoriteRecipeSerializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
 
     @action(methods=['post', 'delete'], detail=True)
     def favorite(self, request, pk):
@@ -122,23 +150,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
 #         return queryset
 
 
-class CreateRetrieveViewSet(mixins.CreateModelMixin, mixins.ListModelMixin,
-                            viewsets.GenericViewSet):
-    pass
+# class CreateRetrieveViewSet(mixins.CreateModelMixin, mixins.ListModelMixin,
+#                             viewsets.GenericViewSet):
+#     pass
 
 
-class SubscribeViewSet(CreateRetrieveViewSet):
-    queryset =Subscription.objects.all()
-    serializer_class = SubscribeSerializer
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('user__username', 'subscribing__username')
-    pagination_class = PageNumberPagination
-    # permission_classes = (IsOwnerOrReadOnly, IsAuthenticated)
+# class SubscribeViewSet(CreateRetrieveViewSet):
+#     queryset =Subscription.objects.all()
+#     serializer_class = SubscribeSerializer
+#     filter_backends = (filters.SearchFilter,)
+#     search_fields = ('user__username', 'subscribing__username')
+#     pagination_class = PageNumberPagination
+#     # permission_classes = (IsOwnerOrReadOnly, IsAuthenticated)
 
-    def get_queryset(self):
-        user_id = get_object_or_404(User, pk=self.request.user.pk)
-        queryset = user_id.subscriber.all()
-        return queryset
+#     def get_queryset(self):
+#         user_id = get_object_or_404(User, pk=self.request.user.pk)
+#         queryset = user_id.subscriber.all()
+#         return queryset
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+#     def perform_create(self, serializer):
+#         serializer.save(user=self.request.user)
