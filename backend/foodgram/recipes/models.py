@@ -159,7 +159,7 @@ class FavoriteRecipe(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='favorite',
+        related_name='favorit',
     )
     recipe = models.ForeignKey(
         Recipe,

@@ -28,3 +28,4 @@ tzdata==2021.5
 gunicorn==20.1.0
 sqlparse==0.4.2
 djoser==2.1.0
+unicodecsv==0.14.1

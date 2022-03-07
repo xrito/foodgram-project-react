@@ -13,8 +13,15 @@ class UserRegistrationSerializer(BaseUserRegistrationSerializer):
                   'email', 'password')
 
 
+class SubscribeRecipeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+
 class UserSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
+    recipes = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -32,12 +39,10 @@ class UserSerializer(serializers.ModelSerializer):
                 pass
         return False
 
-
-class SubscribeRecipeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Recipe
-        fields = ('id', 'name', 'image', 'cooking_time')
-
+    def get_recipes(self, obj):
+        queryset = Recipe.objects.filter(author=obj.id)
+        return SubscribeRecipeSerializer(queryset, many=True).data
+        
 
 class SubscribeSerializer(serializers.ModelSerializer):
     email = serializers.ReadOnlyField(source='subscribing.email')
