@@ -18,7 +18,9 @@ class Command(BaseCommand):
                 for row in reader:
                     if os.path.basename(csv_file) == os.path.basename(
                             r'../data/ingredients.csv'):
-                        ingredient, created = Ingredient.objects.update_or_create(
-                            name=row['name'],
-                            measurement_unit=row['measurement_unit']
+                        ingredient, created = (
+                            Ingredient.objects.update_or_create(
+                                name=row['name'],
+                                measurement_unit=row['measurement_unit']
+                            )
                         )

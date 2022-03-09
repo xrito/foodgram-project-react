@@ -1,7 +1,34 @@
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import UniqueConstraint
-from django.core.validators import MinValueValidator
+
+
+class Ingredient(models.Model):
+    """Ingredient to be used in a recipe"""
+    name = models.CharField(
+        max_length=255,
+        db_index=True,
+        blank=False,
+        verbose_name='Название'
+    )
+    measurement_unit = models.CharField(
+        max_length=255,
+        blank=False,
+        verbose_name='Единицы измерения'
+    )
+
+    class Meta:
+        verbose_name = 'Ingredient'
+        verbose_name_plural = 'Ingredients'
+        constraints = [
+            UniqueConstraint(fields=['name', 'measurement_unit'],
+                             name='unique ingredient')
+        ]
+
+    def __str__(self):
+        return '{}, {}'.format(self.name, self.measurement_unit)
+
 
 class Tag(models.Model):
     """Tag to be used for a recipe"""
@@ -58,8 +85,8 @@ class Recipe(models.Model):
         related_name='recipes',
         verbose_name='Автор'
     )
-    ingredient = models.ManyToManyField(
-        'Ingredient',
+    ingredients = models.ManyToManyField(
+        Ingredient,
         through='IngredientinRecipe',
         related_name='recipes',
         verbose_name='Ингридиенты'
@@ -84,8 +111,8 @@ class Recipe(models.Model):
         help_text='минут'
     )
 
-    def get_ingredient(self):
-        return ", ".join([p.name for p in self.ingredient.all()])
+    def get_ingredients(self):
+        return ", ".join([p.name for p in self.ingredients.all()])
 
     class Meta:
         models.UniqueConstraint(
@@ -98,38 +125,12 @@ class Recipe(models.Model):
         return '{}, {}'.format(self.name, self.author)
 
 
-class Ingredient(models.Model):
-    """Ingredient to be used in a recipe"""
-    name = models.CharField(
-        max_length=255,
-        db_index=True,
-        blank=False,
-        verbose_name='Название'
-    )
-    measurement_unit = models.CharField(
-        max_length=255,
-        blank=False,
-        verbose_name='Единицы измерения'
-    )
-
-    class Meta:
-        verbose_name = 'Ingredient'
-        verbose_name_plural = 'Ingredients'
-        constraints = [
-            UniqueConstraint(fields=['name', 'measurement_unit'],
-                             name='unique ingredient')
-        ]
-
-    def __str__(self):
-        return '{}, {}'.format(self.name, self.measurement_unit)
-
-
 class IngredientinRecipe(models.Model):
     recipe = models.ForeignKey(
         Recipe,
         null=True,
         on_delete=models.CASCADE,
-        related_name='ingredients'
+        related_name='ingredient_recipes'
     )
     ingredient = models.ForeignKey(
         Ingredient,
@@ -190,5 +191,3 @@ class CartRecipe(models.Model):
     class Meta:
         verbose_name = 'Recipe in cart'
         verbose_name_plural = 'Recipes in cart'
-
-

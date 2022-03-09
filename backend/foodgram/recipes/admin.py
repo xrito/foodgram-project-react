@@ -1,6 +1,4 @@
-from django.apps import apps
 from django.contrib import admin
-from django.contrib.admin.sites import AlreadyRegistered
 
 from .models import (CartRecipe, FavoriteRecipe, Ingredient,
                      IngredientinRecipe, Recipe, Tag)
@@ -18,8 +16,8 @@ class IngredientinRecipeInline(admin.TabularInline):
 
 class RecipeAdmin(admin.ModelAdmin):
     list_filter = ('author', 'name', 'tags')
-    list_display = ('name', 'get_ingredient', 'author', 'pub_date')
-    filter_horizontal = ('tags', 'ingredient')
+    list_display = ('name', 'get_ingredients', 'author', 'pub_date')
+    filter_horizontal = ('tags', 'ingredients')
     raw_id_fields = ('author',)
     date_hierarchy = 'pub_date'
     ordering = ('-pub_date',)
@@ -44,16 +42,10 @@ class FavoriteRecipeAdmin(admin.ModelAdmin):
 class CartRecipeAdmin(admin.ModelAdmin):
     list_display = ('user', 'recipe')
 
+
 admin.site.register(CartRecipe, CartRecipeAdmin)
 admin.site.register(FavoriteRecipe, FavoriteRecipeAdmin)
 admin.site.register(Tag, TagAdmin)
 admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
 admin.site.register(IngredientinRecipe, IngredientinRecipeAdmin)
-
-# models = apps.get_app_config('recipes').get_models()
-# for model in models:
-#     try:
-#         admin.site.register(model)
-#     except AlreadyRegistered:
-#         pass

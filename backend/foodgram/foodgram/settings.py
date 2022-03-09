@@ -1,6 +1,5 @@
 import os
 
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SECRET_KEY = 'dfgc_yns18ioi&*zh&gttb(nmh8^=xe5u49%cn8+41%-p8!s&_'
@@ -61,22 +60,22 @@ TEMPLATES = [
 WSGI_APPLICATION = 'foodgram.wsgi.application'
 
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
 # DATABASES = {
 #     'default': {
-#         'ENGINE': os.getenv('DB_ENGINE', default='django.db.backends.postgresql'),
-#         'NAME': os.getenv('DB_NAME', default='postgres'),
-#         'USER': os.getenv('POSTGRES_USER', default='postgres'),
-#         'PASSWORD': os.getenv('POSTGRES_PASSWORD', default='postgres'),
-#         'HOST': os.getenv('DB_HOST', default='db'),
-#         'PORT': os.getenv('DB_PORT', default='5432'),
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
 #     }
 # }
+DATABASES = {
+    'default': {
+        'ENGINE': os.getenv('DB_ENGINE', default='django.db.backends.postgresql'),
+        'NAME': os.getenv('DB_NAME', default='postgres'),
+        'USER': os.getenv('POSTGRES_USER', default='postgres'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', default='postgres'),
+        'HOST': os.getenv('DB_HOST', default='db'),
+        'PORT': os.getenv('DB_PORT', default='5432'),
+    }
+}
 
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -95,9 +94,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/2.2/topics/i18n/
-
 LANGUAGE_CODE = 'ru-RU'
 
 TIME_ZONE = 'Europe/Moscow'
@@ -108,9 +104,6 @@ USE_L10N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
@@ -135,12 +128,18 @@ REST_FRAMEWORK = {
         'django_filters.rest_framework.DjangoFilterBackend'
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
     ]
 }
 DJOSER = {
     'LOGIN_FIELD': 'email',
-     'SERIALIZERS': {
-         'user_create': 'users.serializers.UserRegistrationSerializer'
+    'SERIALIZERS': {
+        'user_create': 'users.serializers.UserRegistrationSerializer'
     }
 }

@@ -1,10 +1,10 @@
 from djoser.serializers import \
     UserCreateSerializer as BaseUserRegistrationSerializer
+from recipes.models import Recipe
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 from users.models import Subscription, User
-from recipes.models import Recipe
 
 
 class UserRegistrationSerializer(BaseUserRegistrationSerializer):
@@ -42,7 +42,7 @@ class UserSerializer(serializers.ModelSerializer):
     def get_recipes(self, obj):
         queryset = Recipe.objects.filter(author=obj.id)
         return SubscribeRecipeSerializer(queryset, many=True).data
-        
+
 
 class SubscribeSerializer(serializers.ModelSerializer):
     email = serializers.ReadOnlyField(source='subscribing.email')
@@ -69,12 +69,11 @@ class SubscribeSerializer(serializers.ModelSerializer):
     validators = [
         UniqueTogetherValidator(
             queryset=Subscription.objects.all(),
-            fields=('user', 'subscribed')
+            fields=('user', 'subscribing')
         )
     ]
 
-    def validate_following(self, value):
+    def validate(self, value):
         if value == self.context['request'].user:
             raise serializers.ValidationError(
                 'Нельзя подписаться на самого себя!')
-        return value
