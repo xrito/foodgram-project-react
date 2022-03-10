@@ -69,14 +69,19 @@ class RecipeSerializer(serializers.ModelSerializer):
         tags = self.initial_data.get('tags')
         ingredients_id = []
         if not ingredients:
-            raise serializers.ValidationError('Нет ингридиентов')
+            raise serializers.ValidationError('Нет ингредиентов')
         if not tags:
             raise serializers.ValidationError('Нет Тега')
+        for ingredient in ingredients:
+            if int(ingredient.get('amount')) <= 0:
+                raise serializers.ValidationError(
+                    ('Значение ингредиента не может быть меньше 0')
+                )
         for ingredient in ingredients:
             ingredient = get_object_or_404(Ingredient,
                                            id=ingredient['id'])
             if ingredient in ingredients_id:
-                raise serializers.ValidationError('Ингридиенты повторяются')
+                raise serializers.ValidationError('Ингредиенты повторяются')
             ingredients_id.append(ingredient)
         value['ingredients'] = ingredients
         return value

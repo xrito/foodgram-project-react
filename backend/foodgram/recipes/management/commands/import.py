@@ -12,12 +12,12 @@ class Command(BaseCommand):
     help = 'Импорт данных из csv в db.'
 
     def handle(self, *args, **options):
-        for csv_file in glob('../../data/*.csv'):
+        for csv_file in glob('./*.csv'):
             with open(csv_file, newline='', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
                     if os.path.basename(csv_file) == os.path.basename(
-                            r'../data/ingredients.csv'):
+                            r'./ingredients.csv'):
                         ingredient, created = (
                             Ingredient.objects.update_or_create(
                                 name=row['name'],
