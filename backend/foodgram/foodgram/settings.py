@@ -6,7 +6,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = False
 
-ALLOWED_HOSTS = ['178.154.222.119', 'foodgramx.myftp.org', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['178.154.222.119', 'foodgramx.myftp.org', 'localhost', '127.0.0.1', 'backend']
 
 
 INSTALLED_APPS = [
