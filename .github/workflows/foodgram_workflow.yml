@@ -37,10 +37,11 @@ jobs:
         username: ${{ secrets.USER }}
         key: ${{ secrets.SSH_KEY }}
         script: |
-          sudo docker pull ${{ secrets.USERNAME }}/foodgram_frontend
-          sudo docker pull ${{ secrets.USERNAME }}/foodgram_web
+          sudo docker pull ${{ secrets.USERNAME }}/foodgram_frontend:latest
+          sudo docker pull ${{ secrets.USERNAME }}/foodgram_web:latest
           sudo docker-compose stop
           sudo docker-compose rm backend
+          sudo docker-compose rm frontend
           rm .env
           touch .env
           echo SECRET_KEY=${{ secrets.SECRET_KEY }} >> .env
@@ -52,7 +53,7 @@ jobs:
           echo DB_PORT=${{ secrets.DB_PORT }} >> .env
           sudo docker-compose up -d
           sudo docker-compose exec -T backend python manage.py migrate --noinput
-          sudo docker-compose exec -T backend python manage.py import --no-input
+          sudo docker-compose exec -T backend python manage.py import_fixture
           sudo docker-compose exec -T backend python manage.py collectstatic --no-input  
   send_message:
     runs-on: ubuntu-latest
