@@ -1,7 +1,9 @@
 name: foodgram workflow
 
-on: [push]
-
+on:
+  push:
+    paths-ignore:
+      - '**/README.md'
 jobs:
   build_and_push_to_docker_hub:
     name: Push Docker image to Docker Hub
@@ -35,8 +37,8 @@ jobs:
         username: ${{ secrets.USER }}
         key: ${{ secrets.SSH_KEY }}
         script: |
-          sudo docker pull ${{ secrets.USERNAME }}/foodgram_web:latest
-          sudo docker pull ${{ secrets.USERNAME }}/foodgram_frontend:latest
+          sudo docker pull ${{ secrets.USERNAME }}/foodgram_frontend
+          sudo docker pull ${{ secrets.USERNAME }}/foodgram_web
           sudo docker-compose stop
           sudo docker-compose rm backend
           sudo fuser -k 80/tcp
