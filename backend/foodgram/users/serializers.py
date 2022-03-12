@@ -1,9 +1,9 @@
-from djoser.serializers import \
-    UserCreateSerializer as BaseUserRegistrationSerializer
-from recipes.models import Recipe
+from djoser.serializers import (
+    UserCreateSerializer as BaseUserRegistrationSerializer)
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
+from recipes.models import Recipe
 from users.models import Subscription, User
 
 
@@ -58,6 +58,12 @@ class SubscribeSerializer(serializers.ModelSerializer):
         model = Subscription
         fields = ('email', 'id', 'username', 'first_name',
                   'last_name', 'is_subscribed', 'recipes', 'recipes_count')
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Subscription.objects.all(),
+                fields=('user', 'subscribing')
+            )
+        ]
 
     def get_recipes_count(self, obj):
         return Recipe.objects.filter(author=obj.subscribing).count()
@@ -65,13 +71,6 @@ class SubscribeSerializer(serializers.ModelSerializer):
     def get_recipes(self, obj):
         queryset = Recipe.objects.filter(author=obj.subscribing)
         return SubscribeRecipeSerializer(queryset, many=True).data
-
-    validators = [
-        UniqueTogetherValidator(
-            queryset=Subscription.objects.all(),
-            fields=('user', 'subscribing')
-        )
-    ]
 
     def validate(self, value):
         if value == self.context['request'].user:

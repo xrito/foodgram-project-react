@@ -19,8 +19,8 @@ class Ingredient(models.Model):
     )
 
     class Meta:
-        verbose_name = 'Ingredient'
-        verbose_name_plural = 'Ingredients'
+        verbose_name = 'Ингредиент'
+        verbose_name_plural = 'Ингредиенты'
         constraints = [
             UniqueConstraint(fields=['name', 'measurement_unit'],
                              name='unique ingredient')
@@ -64,8 +64,8 @@ class Tag(models.Model):
 
     class Meta:
         ordering = ['-id']
-        verbose_name = 'Tag'
-        verbose_name_plural = 'Tags'
+        verbose_name = 'Тег'
+        verbose_name_plural = 'Теги'
 
     def __str__(self):
         return self.name
@@ -89,7 +89,7 @@ class Recipe(models.Model):
         Ingredient,
         through='IngredientinRecipe',
         related_name='recipes',
-        verbose_name='Ингридиенты'
+        verbose_name='Ингредиенты'
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
@@ -111,15 +111,17 @@ class Recipe(models.Model):
         help_text='минут'
     )
 
+    class Meta:
+        verbose_name = 'Рецепт'
+        verbose_name_plural = 'Рецепты'
+        ordering = ('-pub_date',)
+        constraints = [
+            UniqueConstraint(
+                fields=['name', 'author'], name='unique_review')
+        ]
+
     def get_ingredients(self):
         return ", ".join([p.name for p in self.ingredients.all()])
-
-    class Meta:
-        models.UniqueConstraint(
-            fields=['name', 'author'], name='unique_review')
-        verbose_name = 'Recipe'
-        verbose_name_plural = 'Recipes'
-        ordering = ('-pub_date',)
 
     def __str__(self):
         return '{}, {}'.format(self.name, self.author)
@@ -147,6 +149,8 @@ class IngredientinRecipe(models.Model):
 
     class Meta:
         ordering = ['-id']
+        verbose_name = 'Ингредиент в рецепте'
+        verbose_name_plural = 'Ингредиенты в рецептах'
         constraints = [
             UniqueConstraint(fields=['ingredient', 'recipe'],
                              name='unique ingredient in recipe')
@@ -170,11 +174,12 @@ class FavoriteRecipe(models.Model):
 
     class Meta:
         ordering = ['-id']
-        verbose_name = 'Recipe in favorites'
-        verbose_name_plural = 'Recipes in favorites'
-        unique_together = ('user', 'recipe')
-        UniqueConstraint(
-            fields=['user', 'recipe'], name='unique_favorite')
+        verbose_name = 'Рецепт в избранном'
+        verbose_name_plural = 'Рецепты в избранном'
+        constraints = [
+            UniqueConstraint(
+                fields=['user', 'recipe'], name='unique_favorite')
+        ]
 
 
 class CartRecipe(models.Model):
@@ -189,5 +194,5 @@ class CartRecipe(models.Model):
     )
 
     class Meta:
-        verbose_name = 'Recipe in cart'
-        verbose_name_plural = 'Recipes in cart'
+        verbose_name = 'Рецепт в корзине'
+        verbose_name_plural = 'Рецепты в корзине'

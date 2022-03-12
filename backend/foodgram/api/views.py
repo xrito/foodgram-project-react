@@ -1,21 +1,21 @@
 from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from recipes.models import (CartRecipe, FavoriteRecipe, Ingredient,
-                            IngredientinRecipe, Recipe, Tag)
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from users.models import Subscription, User
-from users.serializers import SubscribeSerializer, UserSerializer
 
 from .filters import IngredientFilter, RecipesFilter
 from .pagination import PageLimitPagination
-from .permissions import IsAdminOrReadOnly, IsOwnerOrReadOnly
+from .permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
 from .serializers import (FavoriteRecipeSerializer, IngredientSerializer,
                           RecipeSerializer, TagSerializer)
+from recipes.models import (CartRecipe, FavoriteRecipe, Ingredient,
+                            IngredientinRecipe, Recipe, Tag)
+from users.models import Subscription, User
+from users.serializers import SubscribeSerializer, UserSerializer
 
 
 class ListCreateDeleteViewSet(mixins.ListModelMixin,
@@ -48,11 +48,11 @@ class UserViewSet(UserViewSet):
             queryset = Subscription.objects.create(
                 subscribing_id=id, user_id=self.request.user.id)
             queryset.save()
-            return Response({"message": "Subscription Created Successfully"},
+            return Response({"message": "Подписка успешно создана."},
                             status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             queryset.delete()
-            return Response({"message": "Unsubscribed"},
+            return Response({"message": "Отписался."},
                             status=status.HTTP_202_ACCEPTED)
 
 
@@ -78,7 +78,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     serializer_class = RecipeSerializer
     pagination_class = PageLimitPagination
     filter_backends = [DjangoFilterBackend]
-    permission_classes = [IsOwnerOrReadOnly]
+    permission_classes = [IsAuthorOrReadOnly]
     filterset_class = RecipesFilter
 
     def perform_create(self, serializer):
@@ -101,11 +101,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             favorite = FavoriteRecipe.objects.create(
                 recipe_id=pk, user_id=self.request.user.id)
             favorite.save()
-            return Response({"message": "Recipe added to favorites"},
+            return Response({"message": "Рецепт добавлен в избранное."},
                             status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             favorite.delete()
-            return Response({"message": "Recipe removed from favorites"},
+            return Response({"message": "Рецепт удален из избранного."},
                             status=status.HTTP_204_NO_CONTENT)
         return Response(status=status.HTTP_404_NOT_FOUND)
 
@@ -118,11 +118,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             cart = CartRecipe.objects.create(
                 recipe_id=pk, user_id=self.request.user.id)
             cart.save()
-            return Response({"message": "Recipe added to cart"},
+            return Response({"message": "Рецепт добавлен в корзину."},
                             status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             cart.delete()
-            return Response({"message": "Recipe removed from cart"},
+            return Response({"message": "Рецепт удален из корзины."},
                             status=status.HTTP_204_NO_CONTENT)
         return Response(status=status.HTTP_404_NOT_FOUND)
 

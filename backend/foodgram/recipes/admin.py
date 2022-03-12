@@ -1,5 +1,6 @@
 from django.contrib import admin
 
+
 from .models import (CartRecipe, FavoriteRecipe, Ingredient,
                      IngredientinRecipe, Recipe, Tag)
 
@@ -15,17 +16,23 @@ class IngredientinRecipeInline(admin.TabularInline):
 
 
 class RecipeAdmin(admin.ModelAdmin):
-    list_filter = ('author', 'name', 'tags')
-    list_display = ('name', 'get_ingredients', 'author', 'pub_date')
+    list_filter = ('author', 'tags')
+    list_display = ('name', 'author', 'is_favorited',
+                    'get_ingredients',  'pub_date')
+    search_fields = ('author', 'name', 'tags')
     filter_horizontal = ('tags', 'ingredients')
     raw_id_fields = ('author',)
     date_hierarchy = 'pub_date'
     ordering = ('-pub_date',)
     inlines = [IngredientinRecipeInline]
 
+    def is_favorited(self, obj):
+        return obj.favorite.count()
+
 
 class IngredientAdmin(admin.ModelAdmin):
     list_display = ('name', 'measurement_unit',)
+    search_fields = ('name',)
     list_filter = ('measurement_unit',)
 
 
