@@ -3,9 +3,9 @@ from django.db import models
 
 
 class User(AbstractUser):
-    REQUIRED_FIELDS = ['email', 'first_name', 'last_name', ]
-    USERNAME_FIELD = 'username'
     email = models.EmailField(max_length=255, unique=True)
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name', ]
 
     class Meta:
         ordering = ('id',)

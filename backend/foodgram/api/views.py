@@ -1,11 +1,14 @@
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import IntegrityError
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from rest_framework import mixins, status, viewsets
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 
 from .filters import IngredientFilter, RecipesFilter
 from .pagination import PageLimitPagination
@@ -16,13 +19,6 @@ from recipes.models import (CartRecipe, FavoriteRecipe, Ingredient,
                             IngredientinRecipe, Recipe, Tag)
 from users.models import Subscription, User
 from users.serializers import SubscribeSerializer, UserSerializer
-
-
-class ListCreateDeleteViewSet(mixins.ListModelMixin,
-                              mixins.CreateModelMixin,
-                              mixins.DestroyModelMixin,
-                              viewsets.GenericViewSet):
-    pass
 
 
 class UserViewSet(UserViewSet):
@@ -42,18 +38,36 @@ class UserViewSet(UserViewSet):
     @action(methods=['post', 'delete'], detail=True,
             permission_classes=[IsAuthenticated])
     def subscribe(self, request, id):
-        queryset = Subscription.objects.all().filter(
-            subscribing_id=id, user_id=self.request.user.id)
         if request.method == 'POST':
-            queryset = Subscription.objects.create(
-                subscribing_id=id, user_id=self.request.user.id)
-            queryset.save()
-            return Response({"message": "Подписка успешно создана."},
-                            status=status.HTTP_201_CREATED)
+            subscribing = get_object_or_404(User, id=id)
+            if request.user == subscribing:
+                return Response(
+                    {"errors": "Нельзя подписаться на самого себя!"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            try:
+                queryset = Subscription.objects.create(
+                    subscribing_id=id, user_id=self.request.user.id)
+                queryset.save()
+                return Response({"errors": "Подписка успешно создана."},
+                                status=status.HTTP_201_CREATED)
+            except IntegrityError:
+                return Response({"errors": "Повторная подписка невозможна."},
+                                status=status.HTTP_400_BAD_REQUEST,
+                                )
         if request.method == 'DELETE':
-            queryset.delete()
-            return Response({"message": "Отписался."},
-                            status=status.HTTP_202_ACCEPTED)
+            queryset = Subscription.objects.get(
+                subscribing_id=id, user_id=self.request.user.id)
+            try:
+                queryset.delete()
+            except ObjectDoesNotExist:
+                return Response(
+                    {"errors": "Подписка не найдена."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            return Response(
+                status=status.HTTP_204_NO_CONTENT
+            )
 
 
 class TagViewSet(ReadOnlyModelViewSet):
@@ -63,7 +77,7 @@ class TagViewSet(ReadOnlyModelViewSet):
     pagination_class = None
 
 
-class IngredientViewSet(viewsets.ModelViewSet):
+class IngredientViewSet(ModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
@@ -73,7 +87,24 @@ class IngredientViewSet(viewsets.ModelViewSet):
     filter_class = IngredientFilter
 
 
-class RecipeViewSet(viewsets.ModelViewSet):
+class MyMixin:
+    def object_post(self, model, user, pk):
+        try:
+            model.objects.create(user=user, recipe_id=pk)
+            return Response(status=status.HTTP_201_CREATED)
+        except Exception:
+            if model.objects.filter(user=user, recipe__id=pk).exists():
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    def object_delete(self, model, user, pk):
+        try:
+            model.objects.get(user=user, recipe_id=pk).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+class RecipeViewSet(MyMixin, ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     pagination_class = PageLimitPagination
@@ -94,37 +125,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(methods=['post', 'delete'],
             detail=True, permission_classes=[IsAuthenticated])
-    def favorite(self, request, pk):
-        favorite = FavoriteRecipe.objects.all().filter(
-            recipe_id=pk, user_id=self.request.user.id)
+    def favorite(self, request, pk=None):
         if request.method == 'POST':
-            favorite = FavoriteRecipe.objects.create(
-                recipe_id=pk, user_id=self.request.user.id)
-            favorite.save()
-            return Response({"message": "Рецепт добавлен в избранное."},
-                            status=status.HTTP_201_CREATED)
+            return self.object_post(FavoriteRecipe, self.request.user, pk)
         if request.method == 'DELETE':
-            favorite.delete()
-            return Response({"message": "Рецепт удален из избранного."},
-                            status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_404_NOT_FOUND)
+            return self.object_delete(FavoriteRecipe, self.request.user, pk)
 
     @action(detail=True, methods=['post', 'delete'],
             permission_classes=[IsAuthenticated])
     def shopping_cart(self, request, pk=None):
-        cart = CartRecipe.objects.all().filter(
-            recipe_id=pk, user_id=self.request.user.id)
         if request.method == 'POST':
-            cart = CartRecipe.objects.create(
-                recipe_id=pk, user_id=self.request.user.id)
-            cart.save()
-            return Response({"message": "Рецепт добавлен в корзину."},
-                            status=status.HTTP_201_CREATED)
+            return self.object_post(CartRecipe, self.request.user, pk)
         if request.method == 'DELETE':
-            cart.delete()
-            return Response({"message": "Рецепт удален из корзины."},
-                            status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_404_NOT_FOUND)
+            return self.object_delete(CartRecipe, self.request.user, pk)
 
     @action(detail=False, methods=['GET'])
     def download_shopping_cart(self, request):
