@@ -196,3 +196,7 @@ class CartRecipe(models.Model):
     class Meta:
         verbose_name = 'Рецепт в корзине'
         verbose_name_plural = 'Рецепты в корзине'
+        constraints = [
+            UniqueConstraint(
+                fields=['user', 'recipe'], name='unique_cart')
+        ]
