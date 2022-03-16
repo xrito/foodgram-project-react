@@ -77,7 +77,8 @@ class CreateDeleteViewSet:
         try:
             recipe = get_object_or_404(Recipe, id=pk)
             model.objects.create(user=user, recipe=recipe)
-            return Response(status=status.HTTP_201_CREATED)
+            serializer = self.get_serializer(recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception:
             if model.objects.filter(user=user, recipe__id=pk).exists():
                 return Response(status=status.HTTP_400_BAD_REQUEST)
