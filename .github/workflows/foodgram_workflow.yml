@@ -24,7 +24,7 @@ jobs:
       with:
         context: backend/foodgram
         push: true
-        tags: ${{ secrets.USERNAME }}/foodgram_web:latest
+        tags: ${{ secrets.USERNAME }}/foodgram_web:1.0
   deploy:
     runs-on: ubuntu-latest
     needs: build_and_push_to_docker_hub
@@ -38,7 +38,7 @@ jobs:
         key: ${{ secrets.SSH_KEY }}
         script: |
           sudo docker pull ${{ secrets.USERNAME }}/foodgram_frontend:latest
-          sudo docker pull ${{ secrets.USERNAME }}/foodgram_web:latest
+          sudo docker pull ${{ secrets.USERNAME }}/foodgram_web:1.0
           sudo docker-compose stop
           sudo docker-compose rm backend
           sudo docker-compose rm frontend
