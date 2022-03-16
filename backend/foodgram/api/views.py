@@ -38,36 +38,21 @@ class UserViewSet(UserViewSet):
     @action(methods=['post', 'delete'], detail=True,
             permission_classes=[IsAuthenticated])
     def subscribe(self, request, id):
-        if request.method == 'POST':
-            subscribing = get_object_or_404(User, id=id)
-            if request.user == subscribing:
-                return Response(
-                    {"errors": "Нельзя подписаться на самого себя!"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            try:
-                queryset = Subscription.objects.create(
-                    subscribing_id=id, user_id=self.request.user.id)
-                queryset.save()
-                return Response({"errors": "Подписка успешно создана."},
-                                status=status.HTTP_201_CREATED)
-            except IntegrityError:
-                return Response({"errors": "Повторная подписка невозможна."},
-                                status=status.HTTP_400_BAD_REQUEST,
-                                )
+        subscribing = get_object_or_404(User, id=id)
+        if request.method == 'POST' and request.user != subscribing:
+            queryset = Subscription.objects.create(
+                subscribing_id=id, user_id=self.request.user.id)
+            queryset.save()
+            return Response({"errors": "Подписка успешно создана."},
+                            status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             queryset = Subscription.objects.get(
                 subscribing_id=id, user_id=self.request.user.id)
-            try:
-                queryset.delete()
-            except ObjectDoesNotExist:
-                return Response(
-                    {"errors": "Подписка не найдена."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            queryset.delete(),
             return Response(
                 status=status.HTTP_204_NO_CONTENT
             )
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 class TagViewSet(ReadOnlyModelViewSet):
@@ -87,10 +72,11 @@ class IngredientViewSet(ModelViewSet):
     filter_class = IngredientFilter
 
 
-class MyMixin:
+class CreateDeleteViewSet:
     def object_post(self, model, user, pk):
         try:
-            model.objects.create(user=user, recipe_id=pk)
+            recipe = get_object_or_404(Recipe, id=pk)
+            model.objects.create(user=user, recipe=recipe)
             return Response(status=status.HTTP_201_CREATED)
         except Exception:
             if model.objects.filter(user=user, recipe__id=pk).exists():
@@ -98,13 +84,13 @@ class MyMixin:
 
     def object_delete(self, model, user, pk):
         try:
-            model.objects.get(user=user, recipe_id=pk).delete()
+            model.objects.get(user=user, recipe__id=pk).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-class RecipeViewSet(MyMixin, ModelViewSet):
+class RecipeViewSet(CreateDeleteViewSet, ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     pagination_class = PageLimitPagination
