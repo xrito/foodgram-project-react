@@ -8,7 +8,7 @@ services:
     env_file:
       - ./.env
   backend:
-    image: harkort/foodgram_backend:latest
+    image: harkort/foodgram_backend1:latest
     restart: always
     volumes:
       - static_value:/code/static/
